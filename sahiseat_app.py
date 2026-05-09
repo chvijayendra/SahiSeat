@@ -23,7 +23,28 @@ st.markdown("""
     /* Hide standard sidebar and header for app-like feel */
     header {visibility: hidden;}
     [data-testid="collapsedControl"] {display: none;}
-    .block-container { padding-top: 1.5rem; padding-bottom: 1rem; }
+    
+    .block-container {
+        padding-top: 1rem;
+        padding-bottom: 0rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    div[data-testid="stVerticalBlock"] > div {
+        gap: 0.3rem;
+    }
+
+    .stSelectbox label,
+    .stNumberInput label {
+        font-size: 0.85rem;
+        margin-bottom: 0rem;
+    }
+
+    .stButton > button {
+        height: 2.8rem;
+        border-radius: 10px;
+    }
     
     .main-title {
         text-align: center;
@@ -44,7 +65,15 @@ st.markdown("""
     
     /* Input Form Cards */
     .stSelectbox, .stNumberInput {
-        margin-bottom: 1rem;
+        margin-bottom: 0.35rem;
+    }
+    
+    .stSelectbox div[data-baseweb="select"] > div {
+        min-height: 42px;
+    }
+
+    .stNumberInput input {
+        height: 42px;
     }
     
     /* Result Card Styling */
@@ -115,8 +144,26 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<div class='main-title'>SahiSeat</div>", unsafe_allow_html=True)
-st.markdown("<div class='sub-title'>Smart College Prediction for JEE Counselling</div>", unsafe_allow_html=True)
+st.markdown("""
+<h1 style='
+text-align:center;
+margin-bottom:0;
+font-size:2.2rem;
+line-height: 1.1;
+'>
+SahiSeat
+</h1>
+
+<p style='
+text-align:center;
+margin-top:0;
+margin-bottom:0.7rem;
+font-size:0.95rem;
+color:#94A3B8;
+'>
+Smart College Prediction for JEE Counselling
+</p>
+""", unsafe_allow_html=True)
 
 @st.cache_data
 def load_josaa_data():
@@ -180,7 +227,7 @@ with col2:
     category = st.selectbox("Category", ["OPEN", "EWS", "OBC-NCL", "SC", "ST", "OPEN (PwD)", "EWS (PwD)", "OBC-NCL (PwD)", "SC (PwD)", "ST (PwD)"])
     gender = st.selectbox("Gender", ["Gender-Neutral", "Female-only (including Supernumerary)"])
 
-home_state = st.selectbox("Home State (For NITs HS Quota)", [
+states_list = [
     "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chandigarh", 
     "Chhattisgarh", "Delhi", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", 
     "Jammu and Kashmir", "Jharkhand", "Karnataka", "Kerala", "Ladakh", 
@@ -188,7 +235,10 @@ home_state = st.selectbox("Home State (For NITs HS Quota)", [
     "Nagaland", "Odisha", "Puducherry", "Punjab", "Rajasthan", "Sikkim", 
     "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", 
     "West Bengal", "Other"
-])
+]
+default_index = states_list.index("Telangana") if "Telangana" in states_list else 0
+
+home_state = st.selectbox("Home State (For NITs HS Quota)", states_list, index=default_index)
 
 def map_state_to_nit(state):
     # Mapping to approximate NIT names for HS logic
