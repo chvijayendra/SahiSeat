@@ -113,16 +113,27 @@ Pull requests are welcome! For major changes, please open an issue first.
 5. Open a Pull Request
 
 ---
+## 📜 Copyright
 
-## 📜 License
+© 2026 SahiSeat. All rights reserved.
 
-This project is open source under the [MIT License](LICENSE).
+The source code, branding, design, and content of this project may not be copied, redistributed, modified, or used for commercial purposes without explicit permission from the author.
 
 ---
 
-## 🌐 Live Demo
+## 🌐 Live Website
 
-**[sahiseat.vercel.app](https://sahiseat.vercel.app)**
+🔗 https://sahiseat.vercel.app
+
+---
+
+## 🚀 Built By
+
+Vijayendra Ch
+
+B.Tech AI, IIIT Vadodara
+
+Building tools that help students make better academic and career decisions through data-driven insights.at.vercel.app)**
 
 ---
 
