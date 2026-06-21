@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -27,6 +27,9 @@ import {
   BookOpen,
   ChevronDown,
   ChevronUp,
+  Share2,
+  Download,
+  X,
 } from 'lucide-react'
 import { abbreviateInstituteName } from './lib/formatters'
 
@@ -344,9 +347,392 @@ function ResultCard({ rec, index, highlight = false }) {
   )
 }
 
+// ─── Achievement Modal ──────────────────────────────────────────────────────
+function AchievementModal({ isOpen, onClose, topColleges, eligibleCount }) {
+  const cardRef = useRef(null)
+  const [isSharing, setIsSharing] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [isOpen])
+
+  const generateImage = useCallback(async () => {
+    if (!cardRef.current) return null
+    try {
+      const html2canvas = (await import('html2canvas')).default
+      const canvas = await html2canvas(cardRef.current, {
+        backgroundColor: null,
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      })
+      return canvas
+    } catch (err) {
+      console.error('Canvas generation error:', err)
+      return null
+    }
+  }, [])
+
+  const handleDownload = async () => {
+    setIsDownloading(true)
+    try {
+      const canvas = await generateImage()
+      if (!canvas) return
+      const link = document.createElement('a')
+      link.download = 'sahiseat-achievement.png'
+      link.href = canvas.toDataURL('image/png')
+      link.click()
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
+  const handleShare = async () => {
+    setIsSharing(true)
+    try {
+      const canvas = await generateImage()
+      if (!canvas) return
+      canvas.toBlob(async (blob) => {
+        if (!blob) return
+        const file = new File([blob], 'sahiseat-achievement.png', { type: 'image/png' })
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: 'My College Prediction Results',
+            text: `I just found ${eligibleCount} eligible colleges on SahiSeat! Check it out.`,
+            files: [file],
+          })
+        } else {
+          // Fallback: download
+          const link = document.createElement('a')
+          link.download = 'sahiseat-achievement.png'
+          link.href = canvas.toDataURL('image/png')
+          link.click()
+        }
+      }, 'image/png')
+    } catch (err) {
+      console.error('Share error:', err)
+    } finally {
+      setIsSharing(false)
+    }
+  }
+
+  if (!isOpen) return null
+
+  const displayColleges = topColleges.slice(0, 4)
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Achievement Card"
+    >
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      {/* Modal Container */}
+      <div className="relative z-10 w-full max-w-md mx-auto flex flex-col gap-4 max-h-[95vh] overflow-y-auto">
+        {/* The Achievement Card (rendered to canvas) */}
+        <div
+          ref={cardRef}
+          id="achievement-card"
+          style={{
+            background: 'linear-gradient(135deg, #1a0533 0%, #2d0a6e 25%, #4c1199 50%, #6a21a6 75%, #9333ea 100%)',
+            borderRadius: '24px',
+            padding: '32px 28px',
+            position: 'relative',
+            overflow: 'hidden',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+            minWidth: '320px',
+          }}
+        >
+          {/* Glassmorphism orb backgrounds */}
+          <div style={{
+            position: 'absolute', top: '-60px', right: '-60px',
+            width: '200px', height: '200px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(167,139,250,0.3) 0%, transparent 70%)',
+            filter: 'blur(30px)',
+          }} />
+          <div style={{
+            position: 'absolute', bottom: '-40px', left: '-40px',
+            width: '160px', height: '160px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(196,181,253,0.2) 0%, transparent 70%)',
+            filter: 'blur(25px)',
+          }} />
+          <div style={{
+            position: 'absolute', top: '40%', left: '50%',
+            width: '300px', height: '300px',
+            transform: 'translate(-50%, -50%)',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(139,92,246,0.15) 0%, transparent 70%)',
+            filter: 'blur(40px)',
+          }} />
+
+          {/* Grid texture overlay */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            backgroundImage: 'linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px)',
+            backgroundSize: '32px 32px',
+            borderRadius: '24px',
+          }} />
+
+          {/* Content */}
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            {/* Header */}
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                background: 'rgba(255,255,255,0.08)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                borderRadius: '100px',
+                padding: '4px 12px',
+                backdropFilter: 'blur(8px)',
+                marginBottom: '14px',
+              }}>
+                <span style={{ fontSize: '13px' }}>🎓</span>
+                <span style={{ fontSize: '11px', color: 'rgba(216,180,254,0.9)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>SahiSeat Prediction</span>
+              </div>
+              <div style={{
+                fontSize: '16px',
+                fontWeight: 700,
+                color: 'rgba(255,255,255,0.95)',
+                lineHeight: 1.35,
+                letterSpacing: '-0.01em',
+              }}>
+                Your Rank Has More Potential
+                <br />
+                <span style={{ color: '#c4b5fd' }}>Than You Think</span>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div style={{
+              height: '1px',
+              background: 'linear-gradient(to right, transparent, rgba(167,139,250,0.4), transparent)',
+              marginBottom: '20px',
+            }} />
+
+            {/* Hero Count */}
+            <div style={{
+              textAlign: 'center',
+              marginBottom: '20px',
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(167,139,250,0.25)',
+              borderRadius: '16px',
+              padding: '18px 16px',
+              backdropFilter: 'blur(12px)',
+            }}>
+              <div style={{
+                fontSize: '52px',
+                fontWeight: 800,
+                lineHeight: 1,
+                background: 'linear-gradient(135deg, #ffffff 0%, #c4b5fd 60%, #a78bfa 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                marginBottom: '4px',
+              }}>
+                {eligibleCount}
+              </div>
+              <div style={{
+                fontSize: '11px',
+                fontWeight: 700,
+                color: 'rgba(196,181,253,0.8)',
+                letterSpacing: '0.2em',
+                textTransform: 'uppercase',
+              }}>
+                Colleges Found
+              </div>
+            </div>
+
+            {/* Top Matches */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{
+                fontSize: '10px',
+                fontWeight: 700,
+                color: 'rgba(196,181,253,0.7)',
+                letterSpacing: '0.15em',
+                textTransform: 'uppercase',
+                marginBottom: '10px',
+                textAlign: 'center',
+              }}>
+                ✦ Top Matches ✦
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {displayColleges.map((college, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      background: 'rgba(255,255,255,0.07)',
+                      border: '1px solid rgba(167,139,250,0.2)',
+                      borderRadius: '12px',
+                      padding: '10px 14px',
+                      backdropFilter: 'blur(8px)',
+                    }}
+                  >
+                    <span style={{ fontSize: '14px', flexShrink: 0 }}>🏆</span>
+                    <span style={{
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: 'rgba(255,255,255,0.92)',
+                      lineHeight: 1.3,
+                      flex: 1,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {abbreviateInstituteName(college)}
+                    </span>
+                  </div>
+                ))}
+                {displayColleges.length < 4 && Array.from({ length: 4 - displayColleges.length }).map((_, i) => (
+                  <div
+                    key={`empty-${i}`}
+                    style={{
+                      height: '37px',
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '1px dashed rgba(167,139,250,0.15)',
+                      borderRadius: '12px',
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              textAlign: 'center',
+              paddingTop: '14px',
+              borderTop: '1px solid rgba(255,255,255,0.08)',
+            }}>
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                marginBottom: '8px',
+              }}>
+                <div style={{
+                  width: '18px', height: '18px',
+                  borderRadius: '5px',
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #a855f7)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <span style={{ fontSize: '10px' }}>🎓</span>
+                </div>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.9)' }}>
+                  Sahi<span style={{ color: '#c084fc' }}>Seat</span>
+                </span>
+              </div>
+              <div style={{
+                fontSize: '8.5px',
+                color: 'rgba(255,255,255,0.3)',
+                lineHeight: 1.4,
+                display: 'block',
+              }}>
+                Beta • Based on previous year JoSAA &amp; CSAB cutoff data. Predictions may vary.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            id="achievement-share-btn"
+            onClick={handleShare}
+            disabled={isSharing}
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              padding: '12px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #7c3aed, #9333ea)',
+              border: 'none',
+              color: 'white',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: isSharing ? 'wait' : 'pointer',
+              opacity: isSharing ? 0.7 : 1,
+              boxShadow: '0 4px 24px rgba(124,58,237,0.35)',
+            }}
+          >
+            <Share2 size={15} />
+            {isSharing ? 'Sharing…' : 'Share'}
+          </button>
+          <button
+            id="achievement-download-btn"
+            onClick={handleDownload}
+            disabled={isDownloading}
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              padding: '12px',
+              borderRadius: '12px',
+              background: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              color: 'white',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: isDownloading ? 'wait' : 'pointer',
+              opacity: isDownloading ? 0.7 : 1,
+              backdropFilter: 'blur(8px)',
+            }}
+          >
+            <Download size={15} />
+            {isDownloading ? 'Saving…' : 'Download'}
+          </button>
+          <button
+            id="achievement-close-btn"
+            onClick={onClose}
+            style={{
+              padding: '12px 16px',
+              borderRadius: '12px',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.10)',
+              color: 'rgba(255,255,255,0.6)',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              backdropFilter: 'blur(8px)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+          >
+            <X size={15} />
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function Results({ result, query }) {
   const resultsRef = useRef(null)
   const [hsExpanded, setHsExpanded] = useState(false)
+  const [achievementOpen, setAchievementOpen] = useState(false)
 
   useEffect(() => {
     if (result && resultsRef.current) {
@@ -497,6 +883,42 @@ function Results({ result, query }) {
                   </div>
                 )}
               </div>
+
+              {/* ── Share Achievement Button ── */}
+              <div className="mb-6 flex justify-center">
+                <button
+                  id="share-achievement-btn"
+                  onClick={() => setAchievementOpen(true)}
+                  className="group relative inline-flex items-center gap-2.5 px-6 py-3 rounded-2xl font-semibold text-sm text-white overflow-hidden transition-all duration-300 hover:scale-[1.03] active:scale-[0.98]"
+                  style={{
+                    background: 'linear-gradient(135deg, #5b21b6 0%, #7c3aed 50%, #9333ea 100%)',
+                    boxShadow: '0 0 0 1px rgba(167,139,250,0.25), 0 8px 32px rgba(124,58,237,0.35)',
+                  }}
+                >
+                  {/* Shimmer effect */}
+                  <span
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                    style={{
+                      background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.12) 50%, transparent 60%)',
+                      backgroundSize: '200% 100%',
+                    }}
+                  />
+                  <span className="text-base">🎉</span>
+                  <span>Share Achievement</span>
+                  <Share2 className="h-4 w-4 opacity-80 group-hover:translate-x-0.5 transition-transform" />
+                </button>
+              </div>
+
+              {/* Achievement Modal */}
+              <AchievementModal
+                isOpen={achievementOpen}
+                onClose={() => setAchievementOpen(false)}
+                topColleges={[
+                  ...bestMatches.slice(0, 4).map(r => r.institute),
+                  ...goodOptions.slice(0, Math.max(0, 4 - bestMatches.length)).map(r => r.institute),
+                ].slice(0, 4)}
+                eligibleCount={totalEligibleColleges}
+              />
 
               {/* Bucket 2: Good Options */}
               <div className="mb-6">
@@ -798,6 +1220,10 @@ function PredictForm({ onResult, hasResult, query }) {
                   )}
                   <p className="mt-2 text-center text-xs text-muted-foreground">
                     Matched against 1,400+ official CSAB cutoff records.
+                  </p>
+                  {/* Beta note */}
+                  <p className="mt-3 text-center text-[11px] text-muted-foreground/50">
+                    🚀 SahiSeat Beta • Based on previous year JoSAA &amp; CSAB cutoff data.
                   </p>
                 </div>
               </form>
