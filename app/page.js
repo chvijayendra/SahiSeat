@@ -209,42 +209,62 @@ function Hero() {
             <ChevronRight className="h-3 w-3" />
           </div>
 
-          <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-5xl lg:text-6xl">
-            <span className="bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent">
-              Sahi
+          <h1 className="mt-4 text-center">
+            <span className="block text-4xl md:text-6xl font-bold text-white">
+              CSAB 2026
             </span>
-            <span className="bg-gradient-to-br from-indigo-400 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
-              Seat
+
+            <span className="block text-4xl md:text-6xl font-bold bg-gradient-to-r from-violet-400 via-purple-500 to-fuchsia-500 bg-clip-text text-transparent">
+              College Predictor
             </span>
           </h1>
 
-          <p className="mt-1 text-xs md:text-base text-muted-foreground font-medium">
-            Smart CSAB College Analyzer
-          </p>
-          <p className="mt-1 max-w-lg text-xs md:text-sm text-muted-foreground/70 hidden sm:block">
-            Enter your rank and we&apos;ll surface the colleges and branches you
-            actually have a shot at — based purely on historical closing-rank data.
+          <p className="mt-4 text-sm md:text-lg text-gray-300 max-w-md mx-auto">
+            Find colleges you can realistically get based on
+            official CSAB opening and closing ranks.
           </p>
 
-          <div className="mt-4 hidden md:flex items-center gap-3">
+          <div className="mt-6 grid grid-cols-2 gap-3 text-xs md:text-sm max-w-md mx-auto">
+            <div className="flex items-center justify-center gap-2 rounded-full border border-violet-500/20 bg-white/5 py-2">
+              ✓ Completely Free
+            </div>
+
+            <div className="flex items-center justify-center gap-2 rounded-full border border-violet-500/20 bg-white/5 py-2">
+              ✓ No Login Required
+            </div>
+
+            <div className="flex items-center justify-center gap-2 rounded-full border border-violet-500/20 bg-white/5 py-2">
+              ✓ Official CSAB Data
+            </div>
+
+            <div className="flex items-center justify-center gap-2 rounded-full border border-violet-500/20 bg-white/5 py-2">
+              ✓ Instant Results
+            </div>
+          </div>
+
+          <div className="mt-8 flex flex-col gap-4 w-full max-w-md mx-auto">
             <button
-              onClick={() => document.getElementById('predict')?.scrollIntoView({ behavior: 'smooth' })}
+              onClick={() =>
+                document.getElementById("predict")?.scrollIntoView({ behavior: "smooth" })
+              }
             >
               <Button
-                size="sm"
-                className="rounded-full bg-gradient-to-r from-indigo-500 to-violet-600 text-white hover:from-indigo-600 hover:to-violet-700 shadow-xl shadow-violet-500/20"
+                className="w-full h-16 rounded-full bg-gradient-to-r from-violet-500 to-indigo-500 text-white text-lg font-semibold shadow-2xl shadow-violet-500/30 hover:from-violet-600 hover:to-indigo-600"
               >
-                Predict Colleges
+                → Predict Your Colleges
               </Button>
             </button>
+
             <button
-              onClick={() => document.getElementById('how')?.scrollIntoView({ behavior: 'smooth' })}
+              onClick={() =>
+                document.getElementById("how")?.scrollIntoView({ behavior: "smooth" })
+              }
             >
               <Button
-                size="sm"
-                className="rounded-full bg-gradient-to-r from-indigo-500 to-violet-600 text-white hover:from-indigo-600 hover:to-violet-700 shadow-xl shadow-violet-500/20"
+                variant="outline"
+                className="w-full h-16 rounded-full border border-violet-500/30 bg-black/20 text-white text-lg font-semibold hover:bg-violet-500/10"
               >
-                How It Works
+                How it works
               </Button>
             </button>
           </div>
@@ -265,8 +285,8 @@ function ResultCard({ rec, index, highlight = false }) {
   return (
     <div
       className={`relative rounded-xl border p-3 sm:p-4 transition ${highlight
-          ? 'border-violet-400/30 bg-gradient-to-br from-violet-500/[0.08] via-white/[0.02] to-transparent'
-          : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.04]'
+        ? 'border-violet-400/30 bg-gradient-to-br from-violet-500/[0.08] via-white/[0.02] to-transparent'
+        : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.04]'
         }`}
     >
       <div className="flex justify-between items-start gap-2 mb-1.5 sm:mb-2">
@@ -1185,8 +1205,8 @@ function PredictForm({ onResult, hasResult, query }) {
                             }
                           }}
                           className={`px-2.5 py-1 rounded-full text-xs font-medium border transition ${isSel
-                              ? 'bg-violet-600 border-violet-500 text-white shadow-lg shadow-violet-500/20'
-                              : 'bg-black/40 border-white/5 text-white/60 hover:border-white/20 hover:text-white'
+                            ? 'bg-violet-600 border-violet-500 text-white shadow-lg shadow-violet-500/20'
+                            : 'bg-black/40 border-white/5 text-white/60 hover:border-white/20 hover:text-white'
                             }`}
                         >
                           {branch}
