@@ -120,7 +120,7 @@ function Nav({ hasResult, onReset }) {
             <Button
               size="sm"
               onClick={() => scrollTo('predict')}
-              className="rounded-full bg-white text-black hover:bg-white/90"
+
             >
               Get Started
               <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
@@ -230,9 +230,11 @@ function Hero() {
             <button
               onClick={() => document.getElementById('predict')?.scrollIntoView({ behavior: 'smooth' })}
             >
-              <Button size="sm" className="rounded-full bg-white text-black hover:bg-white/90">
-                Predict my colleges
-                <ArrowRight className="ml-2 h-4 w-4" />
+              <Button
+                size="sm"
+                className="rounded-full bg-gradient-to-r from-indigo-500 to-violet-600 text-white hover:from-indigo-600 hover:to-violet-700 shadow-xl shadow-violet-500/20"
+              >
+                Predict Colleges
               </Button>
             </button>
             <button
@@ -240,10 +242,9 @@ function Hero() {
             >
               <Button
                 size="sm"
-                variant="outline"
-                className="rounded-full border-white/10 bg-white/[0.02] text-foreground hover:bg-white/[0.06]"
+                className="rounded-full bg-gradient-to-r from-indigo-500 to-violet-600 text-white hover:from-indigo-600 hover:to-violet-700 shadow-xl shadow-violet-500/20"
               >
-                How it works
+                How It Works
               </Button>
             </button>
           </div>
@@ -263,11 +264,10 @@ function ResultCard({ rec, index, highlight = false }) {
   const shortInst = abbreviateInstituteName(rec.institute);
   return (
     <div
-      className={`relative rounded-xl border p-3 sm:p-4 transition ${
-        highlight
+      className={`relative rounded-xl border p-3 sm:p-4 transition ${highlight
           ? 'border-violet-400/30 bg-gradient-to-br from-violet-500/[0.08] via-white/[0.02] to-transparent'
           : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.04]'
-      }`}
+        }`}
     >
       <div className="flex justify-between items-start gap-2 mb-1.5 sm:mb-2">
         <div className="min-w-0 flex-1">
@@ -284,7 +284,7 @@ function ResultCard({ rec, index, highlight = false }) {
               R{rec.round}
             </span>
           </div>
-          
+
           <h3 className="text-sm sm:text-base font-bold leading-snug text-white flex items-center gap-1.5">
             <Building2 className="h-3.5 w-3.5 shrink-0 text-violet-300 hidden sm:block" />
             <span className="truncate" title={rec.institute}>{shortInst}</span>
@@ -294,7 +294,7 @@ function ResultCard({ rec, index, highlight = false }) {
             <span className="line-clamp-1" title={rec.program}>{rec.program}</span>
           </p>
         </div>
-        
+
         <div className="shrink-0 text-right">
           <div className="text-[10px] text-white/40 font-mono">
             CR: <strong className="text-white font-semibold">{fmt(rec.closingRank)}</strong>
@@ -317,13 +317,13 @@ function ResultCard({ rec, index, highlight = false }) {
             {rec.gender === 'Female-only (including Supernumerary)' ? 'Female' : 'Gender-Neutral'}
           </span>
         </div>
-        
+
         {/* Ranks (Desktop shows opening rank, Mobile shows details toggle) */}
         <div className="flex items-center gap-2">
           <div className="hidden sm:flex items-center gap-2 font-mono text-white/40 text-[9px] sm:text-[10px]">
             <span>Op: <strong className="text-white/80 font-normal">{fmt(rec.openingRank)}</strong></span>
           </div>
-          
+
           <button
             type="button"
             onClick={() => setExpanded(!expanded)}
@@ -742,21 +742,21 @@ function Results({ result, query }) {
 
   if (!result) return null
 
-  const { 
-    bestMatches = [], 
-    goodOptions = [], 
-    exploreMore = [], 
-    homeStateNitOpportunities = [], 
+  const {
+    bestMatches = [],
+    goodOptions = [],
+    exploreMore = [],
+    homeStateNitOpportunities = [],
     totalEligible = 0,
-    totalEligibleColleges = 0 
+    totalEligibleColleges = 0
   } = result
 
-  const prefText = query.preferredBranches && query.preferredBranches.length > 0 
-    ? query.preferredBranches.join(', ') 
+  const prefText = query.preferredBranches && query.preferredBranches.length > 0
+    ? query.preferredBranches.join(', ')
     : 'None Selected'
 
-  const firstNitName = homeStateNitOpportunities.length > 0 
-    ? abbreviateInstituteName(homeStateNitOpportunities[0].institute) 
+  const firstNitName = homeStateNitOpportunities.length > 0
+    ? abbreviateInstituteName(homeStateNitOpportunities[0].institute)
     : `NIT ${query.state}`
 
   return (
@@ -1184,11 +1184,10 @@ function PredictForm({ onResult, hasResult, query }) {
                               setPreferredBranches([...preferredBranches, branch]);
                             }
                           }}
-                          className={`px-2.5 py-1 rounded-full text-xs font-medium border transition ${
-                            isSel
+                          className={`px-2.5 py-1 rounded-full text-xs font-medium border transition ${isSel
                               ? 'bg-violet-600 border-violet-500 text-white shadow-lg shadow-violet-500/20'
                               : 'bg-black/40 border-white/5 text-white/60 hover:border-white/20 hover:text-white'
-                          }`}
+                            }`}
                         >
                           {branch}
                         </button>
@@ -1386,9 +1385,8 @@ function FAQ() {
               >
                 <span>{q}</span>
                 <ChevronDown
-                  className={`h-4 w-4 shrink-0 text-white/40 transition-transform duration-200 ${
-                    openIdx === i ? 'rotate-180' : ''
-                  }`}
+                  className={`h-4 w-4 shrink-0 text-white/40 transition-transform duration-200 ${openIdx === i ? 'rotate-180' : ''
+                    }`}
                 />
               </button>
               {openIdx === i && (
@@ -1415,11 +1413,22 @@ function About() {
             historical cutoff data and transparent recommendations. No guesswork. No black boxes.
           </p>
           <p className="text-sm text-white/70 mb-6">
-            Built by <span className="text-violet-300 font-semibold">Vijayendra Ch</span> · IIIT Vadodara
+            Built by <span className="text-violet-300 font-semibold">Vijayendra Ch & Avinash</span> · IIIT Vadodara
           </p>
           <div className="flex flex-wrap gap-3">
             <a
               href="https://www.linkedin.com/in/ch-vijayendraswamy/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/[0.07] hover:border-white/20 transition"
+            >
+              <svg className="h-4 w-4 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+              </svg>
+              LinkedIn
+            </a>
+            <a
+              href="https://www.linkedin.com/in/avinash-mondenor-0579ab407/"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/[0.07] hover:border-white/20 transition"
@@ -1439,6 +1448,17 @@ function About() {
                 <path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
               </svg>
               YouTube
+            </a>
+            <a
+              href="https://www.instagram.com/sahiseat.in?igsh=MXZ0dGVhNWMxYmp3"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/[0.07] hover:border-white/20 transition"
+            >
+              <svg className="h-4 w-4 text-pink-400" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M7.75 2C4.574 2 2 4.574 2 7.75v8.5C2 19.426 4.574 22 7.75 22h8.5C19.426 22 22 19.426 22 16.25v-8.5C22 4.574 19.426 2 16.25 2h-8.5zm0 2h8.5A3.75 3.75 0 0120 7.75v8.5A3.75 3.75 0 0116.25 20h-8.5A3.75 3.75 0 014 16.25v-8.5A3.75 3.75 0 017.75 4zm8.75 1a1.25 1.25 0 100 2.5 1.25 1.25 0 000-2.5zM12 7a5 5 0 100 10 5 5 0 000-10zm0 2a3 3 0 110 6 3 3 0 010-6z" />
+              </svg>
+              Instagram
             </a>
           </div>
         </div>
