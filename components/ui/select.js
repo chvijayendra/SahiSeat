@@ -68,7 +68,7 @@ export function SelectContent({ children, className = "" }) {
   const { isOpen } = useContext(SelectContext);
   if (!isOpen) return null;
   return (
-    <div className={`absolute z-50 mt-1.5 w-full max-h-60 overflow-y-auto rounded-xl border border-white/10 bg-[#0c0c0c] p-1 shadow-2xl backdrop-blur-xl ${className}`}>
+    <div className={`absolute z-50 mt-2 w-full max-h-60 overflow-y-auto rounded-2xl border border-border-custom bg-card p-1.5 shadow-2xl backdrop-blur-xl ${className}`}>
       {children}
     </div>
   );
@@ -93,8 +93,8 @@ export function SelectItem({ children, value }) {
         onValueChange(value);
         setIsOpen(false);
       }}
-      className={`flex w-full items-center justify-between px-3 py-2 text-sm rounded-lg text-left transition select-none cursor-pointer hover:bg-white/5 ${
-        isSelected ? "bg-violet-600 text-white font-medium hover:bg-violet-600" : "text-white/80"
+      className={`flex w-full items-center justify-between px-4 py-2.5 text-sm rounded-xl text-left transition select-none cursor-pointer hover:bg-white/[0.04] ${
+        isSelected ? "bg-primary-purple text-white font-semibold hover:bg-primary-purple" : "text-secondary-text"
       }`}
     >
       <span>{children}</span>

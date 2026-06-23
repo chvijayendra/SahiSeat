@@ -105,10 +105,31 @@ export async function POST(request) {
     let eligibleOldLogicCount = 0;
     let eligibleNewLogicCount = 0;
 
+    // Validation function to verify clean records (final validation step)
+    const validateRecord = (r) => {
+      if (!r) return false;
+      const courseName = (r.program || "").toLowerCase();
+      const instituteName = (r.institute || "").toLowerCase();
+      const quotaLower = (r.quota || "").toLowerCase();
+      const seatTypeLower = (r.seatType || "").toLowerCase();
+
+      const isArch = courseName.includes("arch") || courseName.includes("architecture");
+      const isPlan = courseName.includes("planning") || courseName.includes("bplan") || courseName.includes("b.plan");
+      const isSpa = instituteName.includes("school of planning") || instituteName.includes("spa") || instituteName.includes("planning and architecture");
+      const isDasa = quotaLower.includes("dasa") || quotaLower.includes("foreign") || quotaLower.includes("nri") || quotaLower.includes("oci") || quotaLower.includes("pio") ||
+                     seatTypeLower.includes("dasa") || seatTypeLower.includes("foreign") || seatTypeLower.includes("nri") || seatTypeLower.includes("oci") || seatTypeLower.includes("pio") ||
+                     courseName.includes("dasa") || courseName.includes("nri") || courseName.includes("foreign");
+
+      return !isArch && !isPlan && !isSpa && !isDasa;
+    };
+
     for (const r of records) {
       if (r.seatType !== category) continue;
       if (r.gender !== gender) continue;
       if (r.closingRank === null) continue;
+
+      // Filter check in the match loop
+      if (!validateRecord(r)) continue;
 
       const type = getInstituteType(r.institute);
       const quotaLower = r.quota.toLowerCase();
@@ -202,13 +223,13 @@ export async function POST(request) {
     }
     // Re-sort deduped list by rankGap ascending for best-first display
     hsNitDeduped.sort((a, b) => a.rankGap - b.rankGap);
-    const homeStateNitOpportunities = hsNitDeduped.slice(0, 10);
+    const homeStateNitOpportunities = hsNitDeduped.slice(0, 10).filter(validateRecord);
 
     // Feature 3: Recommendation Buckets (max 50 total results)
-    const bestMatches = filtered.slice(0, 10);
-    const goodOptions = filtered.slice(10, 30);
-    const exploreMore = filtered.slice(30, 50);
-    const allEligible = filtered.slice(0, 50); // Keep for backwards compatibility
+    const bestMatches = filtered.slice(0, 10).filter(validateRecord);
+    const goodOptions = filtered.slice(10, 30).filter(validateRecord);
+    const exploreMore = filtered.slice(30, 50).filter(validateRecord);
+    const allEligible = filtered.slice(0, 50).filter(validateRecord); // Keep for backwards compatibility
 
     return handleCORS(
       NextResponse.json({
