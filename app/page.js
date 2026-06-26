@@ -35,6 +35,8 @@ import {
   MapPin,
 } from 'lucide-react'
 import { abbreviateInstituteName } from './lib/formatters'
+import InteractiveParticles from '@/components/InteractiveParticles'
+import Lenis from 'lenis'
 
 // Category dropdown: label shown to user, value used to match Seat Type in CSV.
 const CATEGORIES = [
@@ -66,8 +68,176 @@ const STATES = [
   'Andaman & Nicobar Islands',
 ]
 
-function Nav({ hasResult, onReset }) {
+function ScrollReveal({ children, className = "", delay = 0 }) {
+  const ref = useRef(null)
+  const [revealed, setRevealed] = useState(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setRevealed(true)
+          observer.unobserve(el)
+        }
+      },
+      {
+        threshold: 0.05,
+        rootMargin: '0px 0px -40px 0px'
+      }
+    )
+
+    observer.observe(el)
+    return () => {
+      observer.disconnect()
+    }
+  }, [])
+
+  return (
+    <div
+      ref={ref}
+      className={`reveal-container ${revealed ? 'revealed' : ''} ${className}`}
+      style={{ '--delay': `${delay}ms` }}
+    >
+      {children}
+    </div>
+  )
+}
+
+function TiltCard({ children, className = "", style = {} }) {
+  const cardRef = useRef(null)
+
+  const handleMouseMove = (e) => {
+    if (window.innerWidth < 1024) return // desktop only
+    const card = cardRef.current
+    if (!card) return
+
+    const rect = card.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+
+    const rotateY = ((x / rect.width) - 0.5) * 8
+    const rotateX = (0.5 - (y / rect.height)) * 8
+
+    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px)`
+    card.style.transition = 'transform 0.1s ease-out'
+  }
+
+  const handleMouseLeave = () => {
+    const card = cardRef.current
+    if (!card) return
+    card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0deg)'
+    card.style.transition = 'transform 0.4s ease-out'
+  }
+
+  return (
+    <div
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      className={`card-hover-lift ${className}`}
+      style={style}
+    >
+      {children}
+    </div>
+  )
+}
+
+function Magnetic({ children, className = "" }) {
+  const ref = useRef(null)
+
+  const handleMouseMove = (e) => {
+    if (window.innerWidth < 1024) return // desktop only
+    const el = ref.current
+    if (!el) return
+
+    const rect = el.getBoundingClientRect()
+    const centerX = rect.left + rect.width / 2
+    const centerY = rect.top + rect.height / 2
+    const dx = e.clientX - centerX
+    const dy = e.clientY - centerY
+    const dist = Math.sqrt(dx*dx + dy*dy)
+
+    if (dist < 70) {
+      const pullX = (dx / 70) * 12
+      const pullY = (dy / 70) * 12
+      el.style.transform = `translate3d(${pullX}px, ${pullY}px, 0)`
+      el.style.transition = 'transform 0.1s ease-out'
+    } else {
+      el.style.transform = 'translate3d(0, 0, 0)'
+      el.style.transition = 'transform 0.3s ease-out'
+    }
+  }
+
+  const handleMouseLeave = () => {
+    const el = ref.current
+    if (!el) return
+    el.style.transform = 'translate3d(0, 0, 0)'
+    el.style.transition = 'transform 0.4s ease-out'
+  }
+
+  return (
+    <div
+      ref={ref}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      className={`inline-block ${className}`}
+    >
+      {children}
+    </div>
+  )
+}
+
+function CountUp({ end, duration = 1200 }) {
+  const [count, setCount] = useState(0)
+
+  useEffect(() => {
+    let startTimestamp = null
+    const step = (timestamp) => {
+      if (!startTimestamp) startTimestamp = timestamp
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1)
+      const easedProgress = progress * (2 - progress) // easeOutQuad
+      setCount(Math.floor(easedProgress * end))
+      if (progress < 1) {
+        window.requestAnimationFrame(step)
+      }
+    }
+    window.requestAnimationFrame(step)
+  }, [end, duration])
+
+  return <span>{count.toLocaleString()}</span>
+}
+
+function Nav({ hasResult, onReset, activeSection }) {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+  const containerRef = useRef(null)
+  const [underlineStyle, setUnderlineStyle] = useState({ left: 0, width: 0, opacity: 0 })
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20)
+    }
+    window.addEventListener('scroll', handleScroll)
+    handleScroll()
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  useEffect(() => {
+    if (!containerRef.current) return
+    const activeEl = containerRef.current.querySelector(`[data-section="${activeSection}"]`)
+    if (activeEl) {
+      setUnderlineStyle({
+        left: activeEl.offsetLeft,
+        width: activeEl.offsetWidth,
+        opacity: 1
+      })
+    } else {
+      setUnderlineStyle({ left: 0, width: 0, opacity: 0 })
+    }
+  }, [activeSection])
 
   const scrollTo = (id) => {
     setMobileOpen(false)
@@ -84,8 +254,14 @@ function Nav({ hasResult, onReset }) {
   ]
 
   return (
-    <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-background/80 border-b border-border-custom">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+    <header className={`sticky top-0 z-50 w-full transition-all duration-300 ease-in-out border-b hero-entrance ${
+      scrolled 
+        ? 'backdrop-blur-xl bg-background/80 border-border-custom shadow-[0_4px_30px_rgba(0,0,0,0.4)] h-14' 
+        : 'backdrop-blur-md bg-background/40 border-transparent shadow-none h-16'
+    }`} style={{ animationDelay: '0ms' }}>
+      <div className={`container mx-auto flex items-center justify-between px-4 transition-all duration-300 ${
+        scrolled ? 'h-14' : 'h-16'
+      }`}>
         {/* Logo */}
         <button onClick={() => scrollTo('predict')} className="flex items-center gap-2.5 focus:outline-none cursor-pointer group">
           <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary-purple to-accent-blue shadow-md transition-transform duration-300 group-hover:scale-105">
@@ -97,16 +273,27 @@ function Nav({ hasResult, onReset }) {
         </button>
 
         {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-secondary-text">
+        <nav ref={containerRef} className="hidden md:flex items-center gap-8 text-sm font-medium text-secondary-text relative">
           {NAV_LINKS.map(({ label, id }) => (
             <button
               key={id}
+              data-section={id}
               onClick={() => scrollTo(id)}
-              className="hover:text-primary-text transition-colors duration-200 focus:outline-none cursor-pointer relative py-1 after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-0 after:bg-primary-purple hover:after:w-full after:transition-all after:duration-300"
+              className={`nav-link transition-colors duration-300 focus:outline-none cursor-pointer py-1 ${
+                activeSection === id ? 'text-primary-text font-bold' : 'text-secondary-text/80 hover:text-primary-text'
+              }`}
             >
               {label}
             </button>
           ))}
+          <span 
+            className="absolute bottom-0 h-[2px] bg-gradient-to-r from-primary-purple to-accent-blue transition-all duration-300 ease-out pointer-events-none"
+            style={{
+              left: `${underlineStyle.left}px`,
+              width: `${underlineStyle.width}px`,
+              opacity: underlineStyle.opacity,
+            }}
+          />
         </nav>
 
         {/* Desktop CTA */}
@@ -114,17 +301,17 @@ function Nav({ hasResult, onReset }) {
           {hasResult ? (
             <Button
               onClick={onReset}
-              className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-primary-purple to-accent-blue text-white text-sm font-semibold hover:shadow-[0_4px_20px_rgba(124,58,237,0.3)] transition-all duration-300 active:scale-[0.98] cursor-pointer"
+              className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-primary-purple to-accent-blue text-white text-sm font-semibold hover:shadow-[0_8px_24px_rgba(124,58,237,0.35)] transition-all duration-300 active:scale-[0.96] cursor-pointer btn-premium"
             >
               New Prediction
             </Button>
           ) : (
             <Button
               onClick={() => scrollTo('predict')}
-              className="px-5 py-2.5 rounded-2xl bg-primary-text text-background text-sm font-semibold hover:bg-primary-text/90 transition-all duration-300 active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5"
+              className="group px-5 py-2.5 rounded-2xl bg-primary-text text-background text-sm font-semibold hover:bg-primary-text/90 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(250,250,250,0.15)] transition-all duration-300 active:scale-[0.96] cursor-pointer inline-flex items-center gap-1.5"
             >
               Get Started
-              <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
+              <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
             </Button>
           )}
         </div>
@@ -187,7 +374,10 @@ function Nav({ hasResult, onReset }) {
 
 function Hero() {
   return (
-    <section id="hero-section" className="relative overflow-hidden pt-8 pb-6 md:pt-14 md:pb-10">
+    <section 
+      id="hero-section" 
+      className="relative overflow-hidden pt-8 pb-6 md:pt-14 md:pb-10"
+    >
       {/* Premium subtle background radial glow */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute left-1/2 top-0 h-[300px] w-[600px] md:h-[450px] md:w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-tr from-primary-purple/10 to-accent-blue/10 blur-[100px] md:blur-[140px]" />
@@ -197,59 +387,65 @@ function Hero() {
         <div className="mx-auto flex max-w-xl flex-col items-center text-center">
           
           {/* Small Trust Badge */}
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-border-custom bg-secondary-bg/60 px-3.5 py-1 text-xs text-secondary-text shadow-sm backdrop-blur-md">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-border-custom bg-secondary-bg/60 px-3.5 py-1 text-xs text-secondary-text shadow-sm backdrop-blur-md hero-cinematic badge-glow-hover" style={{ animationDelay: '100ms' }}>
             <span className="text-sm">📊</span>
             <span className="font-semibold tracking-wide">Based on Official CSAB Cutoff Data</span>
           </div>
 
-          {/* Main Heading */}
+          {/* Main Heading (Reveal using masking) */}
           <h1 className="mt-5 text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl leading-[1.15] text-primary-text">
-            CSAB 2026
-            <span className="block mt-1.5 bg-gradient-to-r from-primary-purple via-secondary-purple to-accent-blue bg-clip-text text-transparent">
-              College Predictor
+            <span className="mask-reveal-container">
+              <span className="mask-reveal-line" style={{ '--delay': '200ms' }}>CSAB 2026</span>
+            </span>
+            <span className="mask-reveal-container mt-1.5">
+              <span className="block bg-gradient-to-r from-primary-purple via-secondary-purple to-accent-blue bg-clip-text text-transparent mask-reveal-line" style={{ '--delay': '320ms' }}>
+                College Predictor
+              </span>
             </span>
           </h1>
 
           {/* Short Description */}
-          <p className="mt-4 text-sm sm:text-base text-secondary-text leading-relaxed">
+          <p className="mt-4 text-sm sm:text-base text-secondary-text leading-relaxed hero-cinematic" style={{ animationDelay: '450ms' }}>
             Find colleges you can realistically get based on official CSAB opening and closing ranks.
           </p>
 
           {/* Credibility Badge */}
-          <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-border-custom bg-primary-purple/5 px-3 py-1 text-xs text-secondary-purple font-semibold">
+          <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-border-custom bg-primary-purple/5 px-3 py-1 text-xs text-secondary-purple font-semibold hero-cinematic badge-glow-hover" style={{ animationDelay: '550ms' }}>
             <span>🎓</span>
             <span>Built by IIIT Vadodara Students</span>
           </div>
 
           {/* Feature Pills - 2x2 Grid */}
           <div className="mt-6 w-full max-w-xs grid grid-cols-2 gap-x-4 gap-y-2 px-4 justify-items-start text-left">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-secondary-text">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-secondary-text hero-cinematic" style={{ animationDelay: '650ms' }}>
               <span className="text-success font-bold">✓</span>
               <span>Completely Free</span>
             </div>
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-secondary-text">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-secondary-text hero-cinematic" style={{ animationDelay: '700ms' }}>
               <span className="text-success font-bold">✓</span>
               <span>No Login Required</span>
             </div>
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-secondary-text">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-secondary-text hero-cinematic" style={{ animationDelay: '750ms' }}>
               <span className="text-success font-bold">✓</span>
               <span>Official CSAB Data</span>
             </div>
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-secondary-text">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-secondary-text hero-cinematic" style={{ animationDelay: '800ms' }}>
               <span className="text-success font-bold">✓</span>
               <span>Instant Results</span>
             </div>
           </div>
 
-          {/* Primary CTA (Slightly lower for thumb reach) */}
-          <div className="mt-9 w-full sm:w-auto">
-            <Button
-              onClick={() => document.getElementById('predict')?.scrollIntoView({ behavior: 'smooth' })}
-              className="group w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-primary-purple to-accent-blue text-white text-base font-bold shadow-md hover:shadow-[0_8px_30px_rgba(124,58,237,0.3)] hover:scale-[1.02] transition-all duration-300 active:scale-[0.98] cursor-pointer inline-flex items-center justify-center gap-2"
-            >
-              Predict My Colleges
-              <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-0.5" />
-            </Button>
+          {/* Primary CTA (Slightly lower for thumb reach) with spring reveals & magnetic button */}
+          <div className="mt-9 w-full sm:w-auto btn-spring-in" style={{ '--delay': '900ms' }}>
+            <Magnetic>
+              <Button
+                onClick={() => document.getElementById('predict')?.scrollIntoView({ behavior: 'smooth' })}
+                className="group w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-primary-purple to-accent-blue text-white text-base font-bold shadow-md hover:shadow-[0_8px_32px_rgba(124,58,237,0.4)] transition-all duration-300 cursor-pointer inline-flex items-center justify-center gap-2 btn-premium"
+              >
+                Predict My Colleges
+                <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
+              </Button>
+            </Magnetic>
           </div>
 
         </div>
@@ -266,14 +462,21 @@ function fmt(n) {
 function ResultCard({ rec, index, highlight = false }) {
   const [expanded, setExpanded] = useState(false);
   const shortInst = abbreviateInstituteName(rec.institute);
+  const slideClass = index % 2 === 0 ? 'card-slide-left' : 'card-slide-right'
+  const animDelay = `${(index % 6) * 70}ms`
+
   return (
-    <div
-      className={`relative rounded-2xl border p-4 transition-all duration-300 ${
-        highlight
-          ? 'border-primary-purple/35 bg-gradient-to-br from-primary-purple/[0.08] via-card to-card/50 shadow-md shadow-primary-purple/[0.02]'
-          : 'border-border-custom bg-card hover:bg-card/75 hover:border-secondary-text/25'
-      }`}
+    <TiltCard
+      className={slideClass}
+      style={{ '--delay': animDelay }}
     >
+      <div
+        className={`relative rounded-2xl border p-4 transition-all duration-300 card-hover-lift ${
+          highlight
+            ? 'border-primary-purple/35 bg-gradient-to-br from-primary-purple/[0.08] via-card to-card/50 shadow-md shadow-primary-purple/[0.02]'
+            : 'border-border-custom bg-card hover:bg-card/75 hover:border-secondary-text/25'
+        }`}
+      >
       <div className="flex justify-between items-start gap-3 mb-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 flex-wrap text-[10px] mb-2">
@@ -348,7 +551,8 @@ function ResultCard({ rec, index, highlight = false }) {
           <div>Quota: <strong className="text-primary-text">{rec.quota}</strong></div>
         </div>
       )}
-    </div>
+      </div>
+    </TiltCard>
   )
 }
 
@@ -549,7 +753,7 @@ function AchievementModal({ isOpen, onClose, topColleges, eligibleCount }) {
                 backgroundClip: 'text',
                 marginBottom: '4px',
               }}>
-                {eligibleCount}
+                <CountUp end={eligibleCount} />
               </div>
               <div style={{
                 fontSize: '11px',
@@ -816,7 +1020,7 @@ function Results({ result, query }) {
         <div className="mx-auto max-w-5xl">
           
           {/* Compact SaaS Filter Toolbar */}
-          <div className="mb-6 space-y-3">
+          <div className="mb-6 space-y-3 hero-entrance">
             {/* Row 1: Search Input & Sorting */}
             <div className="flex flex-col sm:flex-row gap-3">
               {/* Full-width Search */}
@@ -941,7 +1145,7 @@ function Results({ result, query }) {
             <>
               {/* Feature 1: Home State NIT Opportunities - Collapsible Premium Card */}
               {processedHomeState.length > 0 && (
-                <div className="mb-6">
+                <div className="mb-6 hero-entrance" style={{ animationDelay: '100ms' }}>
                   <div className="rounded-2xl border border-primary-purple/20 bg-gradient-to-r from-primary-purple/[0.05] via-card to-card shadow-sm overflow-hidden">
                     <button
                       type="button"
@@ -952,8 +1156,11 @@ function Results({ result, query }) {
                         <span className="text-sm sm:text-base font-extrabold text-primary-text flex items-center gap-2">
                           🏠 Your Home State Advantage
                         </span>
-                        <span className="text-xs text-primary-purple font-semibold mt-1">
-                          {firstNitName} · {processedHomeState.length} Eligible Program{processedHomeState.length > 1 ? 's' : ''}
+                        <span className="text-xs text-primary-purple font-semibold mt-1 inline-flex items-center gap-1">
+                          <span>{firstNitName}</span>
+                          <span>·</span>
+                          <CountUp end={processedHomeState.length} />
+                          <span>Eligible Program{processedHomeState.length > 1 ? 's' : ''}</span>
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5 text-xs text-primary-purple font-bold bg-primary-purple/10 border border-primary-purple/20 px-4 py-1.5 rounded-full transition hover:bg-primary-purple/20">
@@ -975,13 +1182,15 @@ function Results({ result, query }) {
 
               {/* Bucket 1: Best Matches */}
               {processedBest.length > 0 && (
-                <div className="mb-6">
+                <div className="mb-6 hero-entrance" style={{ animationDelay: '150ms' }}>
                   <div className="mb-3.5 flex items-center justify-between border-b border-border-custom pb-3">
                     <div className="flex items-center gap-2">
                       <span className="text-lg">🏆</span>
                       <h3 className="text-sm sm:text-base font-extrabold text-primary-text tracking-tight">Best Matches</h3>
-                      <span className="text-[10px] sm:text-xs text-secondary-text/80 font-normal">
-                        · {processedBest.length} matching choices
+                      <span className="text-[10px] sm:text-xs text-secondary-text/80 font-normal inline-flex items-center gap-1">
+                        <span>·</span>
+                        <CountUp end={processedBest.length} />
+                        <span>matching choices</span>
                       </span>
                     </div>
                     <span className="px-2.5 py-0.5 rounded bg-primary-purple/10 border border-primary-purple/20 text-secondary-purple text-[10px] font-bold font-mono uppercase tracking-wider">Top Tier</span>
@@ -1000,7 +1209,7 @@ function Results({ result, query }) {
                   <button
                     id="share-achievement-btn"
                     onClick={() => setAchievementOpen(true)}
-                    className="group relative inline-flex items-center gap-2.5 px-6 py-3 rounded-2xl font-bold text-sm text-white overflow-hidden transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-md bg-gradient-to-r from-primary-purple to-accent-blue border border-primary-purple/20 hover:shadow-[0_8px_32px_rgba(124,58,237,0.4)]"
+                    className="group relative inline-flex items-center gap-2.5 px-6 py-3 rounded-2xl font-bold text-sm text-white overflow-hidden transition-all duration-300 cursor-pointer shadow-md bg-gradient-to-r from-primary-purple to-accent-blue border border-primary-purple/20 hover:shadow-[0_8px_32px_rgba(124,58,237,0.4)] btn-premium"
                   >
                     <span className="text-base">🎉</span>
                     <span>Share Achievement</span>
@@ -1022,7 +1231,7 @@ function Results({ result, query }) {
 
               {/* Bucket 2: Good Options */}
               {processedGood.length > 0 && (
-                <div className="mb-6">
+                <div className="mb-6 hero-entrance" style={{ animationDelay: '200ms' }}>
                   <div className="mb-3.5 flex items-center justify-between border-b border-border-custom pb-3">
                     <div className="flex items-center gap-2">
                       <span className="text-lg">🎯</span>
@@ -1043,7 +1252,7 @@ function Results({ result, query }) {
 
               {/* Bucket 3: Explore More */}
               {processedExplore.length > 0 && (
-                <div className="mb-6">
+                <div className="mb-6 hero-entrance" style={{ animationDelay: '250ms' }}>
                   <div className="mb-3.5 flex items-center justify-between border-b border-border-custom pb-3">
                     <div className="flex items-center gap-2">
                       <span className="text-lg">🔍</span>
@@ -1132,10 +1341,10 @@ function PredictForm({ onResult, hasResult, query }) {
   return (
     <section id="predict" className="relative py-10 md:py-16 bg-secondary-bg/25">
       <div className="container mx-auto px-4">
-        <div className="mx-auto max-w-3xl">
+        <ScrollReveal className="mx-auto max-w-3xl">
           {/* Header */}
-          <div className="mb-8 text-center">
-            <div className="inline-flex items-center gap-2 rounded-full border border-border-custom bg-[#13131A]/60 px-3.5 py-1 text-xs text-secondary-text shadow-sm">
+          <div className="mb-8 text-center reveal-item">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border-custom bg-[#13131A]/60 px-3.5 py-1 text-xs text-secondary-text shadow-sm badge-glow-hover">
               <Target className="h-3.5 w-3.5 text-primary-purple" />
               <span className="font-semibold tracking-wide">CSAB College Analyzer</span>
             </div>
@@ -1148,7 +1357,7 @@ function PredictForm({ onResult, hasResult, query }) {
           </div>
 
           {/* Premium Glassmorphic Form Card */}
-          <Card className="relative overflow-hidden border border-[rgba(255,255,255,0.08)] bg-[#13131A]/90 backdrop-blur-xl rounded-[24px] shadow-[0_12px_40px_rgba(0,0,0,0.5)]">
+          <Card className="relative overflow-hidden border border-[rgba(255,255,255,0.08)] bg-[#13131A]/90 backdrop-blur-xl rounded-[24px] shadow-[0_12px_40px_rgba(0,0,0,0.5)] reveal-item" style={{ '--delay': '150ms' }}>
             <div className="pointer-events-none absolute -top-24 left-1/2 h-48 w-[80%] -translate-x-1/2 rounded-full bg-primary-purple/10 blur-3xl" />
 
             <CardContent className="relative p-6 md:p-10">
@@ -1266,7 +1475,7 @@ function PredictForm({ onResult, hasResult, query }) {
                   <Button
                     type="submit"
                     disabled={!ready || loading}
-                    className="group h-[56px] w-full rounded-2xl bg-gradient-to-r from-primary-purple to-accent-blue text-base font-semibold text-white shadow-md hover:shadow-[0_8px_30px_rgba(124,58,237,0.35)] transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:scale-100 disabled:shadow-none cursor-pointer flex items-center justify-center gap-2"
+                    className="group h-[56px] w-full rounded-2xl bg-gradient-to-r from-primary-purple to-accent-blue text-base font-semibold text-white shadow-md hover:shadow-[0_8px_32px_rgba(124,58,237,0.4)] transition-all duration-300 disabled:opacity-50 disabled:scale-100 disabled:shadow-none cursor-pointer flex items-center justify-center gap-2 btn-premium"
                   >
                     {loading ? (
                       <span className="inline-flex items-center gap-2">
@@ -1292,7 +1501,7 @@ function PredictForm({ onResult, hasResult, query }) {
               </form>
             </CardContent>
           </Card>
-        </div>
+        </ScrollReveal>
       </div>
     </section>
   )
@@ -1307,50 +1516,60 @@ function Features() {
   ]
   const coming = [
     { emoji: '📋', title: 'Personalized Choice List Generator' },
-    { emoji: '⚖️', title: 'College Comparison Tool' },
+    { emoji: '⚖', title: 'College Comparison Tool' },
     { emoji: '🧠', title: 'CSAB Strategy Assistant' },
     { emoji: '💾', title: 'Save & Track Choices' },
   ]
   return (
     <section id="features" className="py-12 md:py-20 bg-secondary-bg/15 border-t border-b border-border-custom">
       <div className="container mx-auto px-4">
-        <div className="mx-auto max-w-2xl text-center mb-12">
+        <ScrollReveal className="mx-auto max-w-2xl text-center mb-12">
           <h2 className="text-2xl md:text-4xl font-extrabold tracking-tight text-primary-text">Features</h2>
-        </div>
+        </ScrollReveal>
 
         {/* Live features */}
-        <div className="mx-auto max-w-5xl grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {live.map(({ emoji, title, desc }) => (
-            <div
-              key={title}
-              className="rounded-2xl border border-border-custom bg-card p-6 hover:border-primary-purple/35 transition-all duration-300 shadow-sm"
-            >
-              <div className="text-3xl mb-4">{emoji}</div>
-              <h3 className="text-sm font-bold text-primary-text mb-2">{title}</h3>
-              <p className="text-xs text-secondary-text leading-relaxed">{desc}</p>
-            </div>
-          ))}
-        </div>
+        <ScrollReveal className="mx-auto max-w-5xl">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {live.map(({ emoji, title, desc }, i) => (
+              <TiltCard
+                key={title}
+                className="rounded-2xl border border-border-custom bg-card p-6 hover:border-primary-purple/35 transition-all duration-300 shadow-sm features-reveal-item"
+                style={{ 
+                  '--delay': `${i * 150}ms`,
+                  '--rot': `${i % 2 === 0 ? '-1.5deg' : '1.5deg'}`
+                }}
+              >
+                <div className="text-3xl mb-4">{emoji}</div>
+                <h3 className="text-sm font-bold text-primary-text mb-2">{title}</h3>
+                <p className="text-xs text-secondary-text leading-relaxed">{desc}</p>
+              </TiltCard>
+            ))}
+          </div>
+        </ScrollReveal>
 
         {/* Coming Soon */}
-        <div className="mx-auto max-w-5xl mt-10">
+        <ScrollReveal className="mx-auto max-w-5xl mt-10">
           <div className="flex items-center gap-3 mb-5">
             <span className="text-xs font-bold text-secondary-text uppercase tracking-widest">Coming Soon</span>
             <span className="text-base">🚀</span>
             <div className="flex-1 h-px bg-border-custom" />
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {coming.map(({ emoji, title }) => (
-              <div
+            {coming.map(({ emoji, title }, i) => (
+              <TiltCard
                 key={title}
-                className="rounded-2xl border border-border-custom bg-[#111118]/50 p-4.5 flex items-center gap-3.5 opacity-65 hover:opacity-85 transition-opacity"
+                className="rounded-2xl border border-border-custom bg-[#111118]/50 p-4.5 flex items-center gap-3.5 opacity-65 hover:opacity-85 transition-opacity features-reveal-item"
+                style={{ 
+                  '--delay': `${(i + 4) * 150}ms`,
+                  '--rot': `${i % 2 === 0 ? '1.2deg' : '-1.2deg'}`
+                }}
               >
                 <span className="text-xl shrink-0">{emoji}</span>
                 <span className="text-xs font-semibold text-secondary-text">{title}</span>
-              </div>
+              </TiltCard>
             ))}
           </div>
-        </div>
+        </ScrollReveal>
       </div>
     </section>
   )
@@ -1366,18 +1585,24 @@ function HowItWorks() {
   return (
     <section id="how" className="py-12 md:py-20">
       <div className="container mx-auto px-4">
-        <div className="mx-auto max-w-2xl text-center mb-12">
+        <ScrollReveal className="mx-auto max-w-2xl text-center mb-12">
           <h2 className="text-2xl md:text-4xl font-extrabold tracking-tight text-primary-text">How It Works</h2>
-        </div>
-        <div className="mx-auto max-w-5xl grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {steps.map((s) => (
-            <div key={s.n} className="relative rounded-2xl border border-border-custom bg-gradient-to-b from-card to-transparent p-6 hover:border-primary-purple/20 transition duration-300">
-              <div className="text-xs font-bold tracking-widest text-primary-purple mb-3 font-mono">STEP {s.n}</div>
-              <div className="text-sm font-bold text-primary-text mb-2">{s.t}</div>
-              <p className="text-xs text-secondary-text leading-relaxed">{s.d}</p>
-            </div>
-          ))}
-        </div>
+        </ScrollReveal>
+        <ScrollReveal className="mx-auto max-w-5xl">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 how-grid-container">
+            {steps.map((s, i) => (
+              <TiltCard
+                key={s.n}
+                className="relative rounded-2xl border border-border-custom bg-[#13131A] bg-gradient-to-b from-card to-transparent p-6 hover:border-primary-purple/20 transition duration-300 step-reveal-item"
+                style={{ '--delay': `${i * 200}ms` }}
+              >
+                <div className="text-xs font-bold tracking-widest text-primary-purple mb-3 font-mono">STEP {s.n}</div>
+                <div className="text-sm font-bold text-primary-text mb-2">{s.t}</div>
+                <p className="text-xs text-secondary-text leading-relaxed">{s.d}</p>
+              </TiltCard>
+            ))}
+          </div>
+        </ScrollReveal>
       </div>
     </section>
   )
@@ -1410,34 +1635,41 @@ function FAQ() {
   return (
     <section id="faq" className="py-12 md:py-20 bg-secondary-bg/15 border-t border-border-custom">
       <div className="container mx-auto px-4">
-        <div className="mx-auto max-w-2xl text-center mb-12">
+        <ScrollReveal className="mx-auto max-w-2xl text-center mb-12">
           <h2 className="text-2xl md:text-4xl font-extrabold tracking-tight text-primary-text">Frequently Asked Questions</h2>
-        </div>
-        <div className="mx-auto max-w-2xl space-y-3.5">
-          {items.map(({ q, a }, i) => (
-            <div
-              key={i}
-              className="rounded-2xl border border-border-custom bg-card overflow-hidden transition duration-300"
-            >
-              <button
-                onClick={() => setOpenIdx(openIdx === i ? null : i)}
-                className="w-full flex items-center justify-between px-6 py-5 text-left text-sm font-semibold text-primary-text hover:bg-[#111118]/50 transition focus:outline-none cursor-pointer"
+        </ScrollReveal>
+        <ScrollReveal className="mx-auto max-w-2xl">
+          <div className="space-y-3.5">
+            {items.map(({ q, a }, i) => (
+              <div
+                key={i}
+                className="rounded-2xl border border-border-custom bg-card overflow-hidden transition duration-300 reveal-item"
+                style={{ '--delay': `${i * 100}ms` }}
               >
-                <span>{q}</span>
-                <ChevronDown
-                  className={`h-4.5 w-4.5 shrink-0 text-secondary-text/60 transition-transform duration-250 ${
-                    openIdx === i ? 'rotate-180' : ''
+                <button
+                  onClick={() => setOpenIdx(openIdx === i ? null : i)}
+                  className="w-full flex items-center justify-between px-6 py-5 text-left text-sm font-semibold text-primary-text hover:bg-[#111118]/50 transition focus:outline-none cursor-pointer"
+                >
+                  <span>{q}</span>
+                  <ChevronDown
+                    className={`h-4.5 w-4.5 shrink-0 text-secondary-text/60 transition-transform duration-250 ${
+                      openIdx === i ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+                <div 
+                  className={`border-t border-border-custom bg-[#09090B]/30 leading-relaxed text-sm text-secondary-text transition-all duration-300 ${
+                    openIdx === i 
+                      ? 'max-h-[300px] px-6 pb-5 pt-4 opacity-100' 
+                      : 'max-h-0 px-6 py-0 opacity-0 overflow-hidden'
                   }`}
-                />
-              </button>
-              {openIdx === i && (
-                <div className="px-6 pb-5 text-sm text-secondary-text border-t border-border-custom bg-[#09090B]/30 pt-4 leading-relaxed">
+                >
                   {a}
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
+              </div>
+            ))}
+          </div>
+        </ScrollReveal>
       </div>
     </section>
   )
@@ -1447,67 +1679,69 @@ function About() {
   return (
     <section id="about" className="py-12 md:py-20">
       <div className="container mx-auto px-4">
-        <div className="mx-auto max-w-xl p-8 rounded-3xl border border-border-custom bg-card shadow-lg relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-[1.5px] bg-gradient-to-r from-primary-purple to-transparent" />
-          
-          <h2 className="text-2xl md:text-3xl font-extrabold text-primary-text tracking-tight mb-4">About SahiSeat</h2>
-          <p className="text-sm text-secondary-text leading-relaxed mb-6">
-            SahiSeat helps JEE aspirants make smarter JoSAA and CSAB counseling decisions using
-            historical cutoff data and transparent recommendations. No guesswork. No black boxes.
-          </p>
-          <p className="text-sm text-secondary-text mb-6">
-            Built by <span className="text-primary-purple font-bold">Vijayendra Ch &amp; Avinash</span> · IIIT Vadodara
-          </p>
-          
-          <div className="grid grid-cols-2 gap-3.5 max-w-sm">
-            <a
-              href="https://www.linkedin.com/in/ch-vijayendraswamy/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-2xl border border-border-custom bg-secondary-bg px-4.5 py-3.5 text-xs font-semibold text-secondary-text hover:text-primary-text hover:bg-card hover:border-secondary-text/30 transition duration-200"
-            >
-              <svg className="h-4 w-4 text-blue-400 shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-              </svg>
-              LinkedIn
-            </a>
-            <a
-              href="https://www.linkedin.com/in/avinash-mondenor-0579ab407/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-2xl border border-border-custom bg-secondary-bg px-4.5 py-3.5 text-xs font-semibold text-secondary-text hover:text-primary-text hover:bg-card hover:border-secondary-text/30 transition duration-200"
-            >
-              <svg className="h-4 w-4 text-blue-400 shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-              </svg>
-              LinkedIn
-            </a>
-            <a
-              href="https://www.youtube.com/@SahiSeat"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-2xl border border-border-custom bg-secondary-bg px-4.5 py-3.5 text-xs font-semibold text-secondary-text hover:text-primary-text hover:bg-card hover:border-secondary-text/30 transition duration-200"
-            >
-              <svg className="h-4 w-4 text-red-500 shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-              </svg>
-              YouTube
-            </a>
-            <a
-              href="https://www.instagram.com/sahiseat.in"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-2xl border border-border-custom bg-secondary-bg px-4.5 py-3.5 text-xs font-semibold text-secondary-text hover:text-primary-text hover:bg-card hover:border-secondary-text/30 transition duration-200"
-            >
-              <svg className="h-4 w-4 text-pink-500 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-                <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z" />
-                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
-              </svg>
-              Instagram
-            </a>
+        <ScrollReveal className="mx-auto max-w-xl">
+          <div className="p-8 rounded-3xl border border-border-custom bg-card shadow-lg relative overflow-hidden card-hover-lift reveal-item">
+            <div className="absolute top-0 left-0 w-full h-[1.5px] bg-gradient-to-r from-primary-purple to-transparent" />
+            
+            <h2 className="text-2xl md:text-3xl font-extrabold text-primary-text tracking-tight mb-4">About SahiSeat</h2>
+            <p className="text-sm text-secondary-text leading-relaxed mb-6">
+              SahiSeat helps JEE aspirants make smarter JoSAA and CSAB counseling decisions using
+              historical cutoff data and transparent recommendations. No guesswork. No black boxes.
+            </p>
+            <p className="text-sm text-secondary-text mb-6">
+              Built by <span className="text-primary-purple font-bold">Vijayendra Ch &amp; Avinash</span> · IIIT Vadodara
+            </p>
+            
+            <div className="grid grid-cols-2 gap-3.5 max-w-sm">
+              <a
+                href="https://www.linkedin.com/in/ch-vijayendraswamy/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-2xl border border-border-custom bg-secondary-bg px-4.5 py-3.5 text-xs font-semibold text-secondary-text hover:text-primary-text hover:bg-card hover:border-secondary-text/30 hover:-translate-y-0.5 transition duration-200"
+              >
+                <svg className="h-4 w-4 text-blue-400 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                </svg>
+                LinkedIn
+              </a>
+              <a
+                href="https://www.linkedin.com/in/avinash-mondenor-0579ab407/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-2xl border border-border-custom bg-secondary-bg px-4.5 py-3.5 text-xs font-semibold text-secondary-text hover:text-primary-text hover:bg-card hover:border-secondary-text/30 hover:-translate-y-0.5 transition duration-200"
+              >
+                <svg className="h-4 w-4 text-blue-400 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                </svg>
+                LinkedIn
+              </a>
+              <a
+                href="https://www.youtube.com/@SahiSeat"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-2xl border border-border-custom bg-secondary-bg px-4.5 py-3.5 text-xs font-semibold text-secondary-text hover:text-primary-text hover:bg-card hover:border-secondary-text/30 hover:-translate-y-0.5 transition duration-200"
+              >
+                <svg className="h-4 w-4 text-red-500 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                </svg>
+                YouTube
+              </a>
+              <a
+                href="https://www.instagram.com/sahiseat.in"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-2xl border border-border-custom bg-secondary-bg px-4.5 py-3.5 text-xs font-semibold text-secondary-text hover:text-primary-text hover:bg-card hover:border-secondary-text/30 hover:-translate-y-0.5 transition duration-200"
+              >
+                <svg className="h-4 w-4 text-pink-500 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                  <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z" />
+                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+                </svg>
+                Instagram
+              </a>
+            </div>
           </div>
-        </div>
+        </ScrollReveal>
       </div>
     </section>
   )
@@ -1516,19 +1750,21 @@ function About() {
 function Footer() {
   return (
     <footer className="border-t border-border-custom py-12 bg-background">
-      <div className="container mx-auto flex flex-col items-center justify-between gap-6 px-4 md:flex-row">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-primary-purple to-accent-blue shadow-md">
-            <GraduationCap className="h-4.5 w-4.5 text-white" />
+      <ScrollReveal className="container mx-auto px-4">
+        <div className="flex flex-col items-center justify-between gap-6 md:flex-row reveal-item">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-primary-purple to-accent-blue shadow-md">
+              <GraduationCap className="h-4.5 w-4.5 text-white" />
+            </div>
+            <span className="text-base font-bold tracking-tight text-primary-text">
+              Sahi<span className="bg-gradient-to-r from-primary-purple to-secondary-purple bg-clip-text text-transparent">Seat</span>
+            </span>
           </div>
-          <span className="text-base font-bold tracking-tight text-primary-text">
-            Sahi<span className="bg-gradient-to-r from-primary-purple to-secondary-purple bg-clip-text text-transparent">Seat</span>
-          </span>
+          <p className="text-xs text-secondary-text/80 font-medium">
+            © {new Date().getFullYear()} SahiSeat. Not affiliated with NTA, JoSAA or CSAB.
+          </p>
         </div>
-        <p className="text-xs text-secondary-text/80 font-medium">
-          © {new Date().getFullYear()} SahiSeat. Not affiliated with NTA, JoSAA or CSAB.
-        </p>
-      </div>
+      </ScrollReveal>
     </footer>
   )
 }
@@ -1692,9 +1928,61 @@ const App = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  const [activeSection, setActiveSection] = useState('predict')
+
+  // Lenis smooth scroll
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // easeOutExpo
+      direction: 'vertical',
+      smooth: true,
+    })
+
+    function raf(time) {
+      lenis.raf(time)
+      requestAnimationFrame(raf)
+    }
+
+    requestAnimationFrame(raf)
+
+    return () => {
+      lenis.destroy()
+    }
+  }, [])
+
+  // Section observer for header link highlights
+  useEffect(() => {
+    const sections = ['predict', 'features', 'how', 'faq', 'about']
+    const observerOptions = {
+      root: null,
+      rootMargin: '-30% 0px -60% 0px',
+      threshold: 0,
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          setActiveSection(entry.target.id)
+        }
+      })
+    }, observerOptions)
+
+    sections.forEach((id) => {
+      const el = document.getElementById(id)
+      if (el) observer.observe(el)
+    })
+
+    return () => observer.disconnect()
+  }, [])
+
   return (
     <main className="relative min-h-screen bg-background text-foreground">
-      <Nav hasResult={!!result} onReset={onReset} />
+      <div className="grain-overlay" />
+      <InteractiveParticles />
+      <Nav hasResult={!!result} onReset={onReset} activeSection={activeSection} />
       <Hero />
       <PredictForm onResult={onResult} hasResult={!!result} query={query} />
       {result && query && <Results result={result} query={query} />}
@@ -1706,10 +1994,10 @@ const App = () => {
 
       {/* Floating Hero CTA */}
       {showFloatingCta && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-sm px-4 transition-all duration-300">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-sm px-4 transition-all duration-300 animate-hero-entrance">
           <Button
             onClick={() => document.getElementById('predict')?.scrollIntoView({ behavior: 'smooth' })}
-            className="w-full h-[52px] rounded-2xl bg-gradient-to-r from-primary-purple to-accent-blue text-white text-sm font-bold shadow-lg shadow-primary-purple/20 hover:shadow-[0_8px_30px_rgba(124,58,237,0.35)] transition-all duration-300 cursor-pointer flex items-center justify-center gap-1.5"
+            className="w-full h-[52px] rounded-2xl bg-gradient-to-r from-primary-purple to-accent-blue text-white text-sm font-bold shadow-lg shadow-primary-purple/20 hover:shadow-[0_8px_32px_rgba(124,58,237,0.4)] transition-all duration-300 cursor-pointer flex items-center justify-center gap-1.5 btn-premium"
           >
             Predict My Colleges
             <ArrowRight className="h-4.5 w-4.5" />
