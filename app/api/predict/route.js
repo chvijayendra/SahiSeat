@@ -19,33 +19,48 @@ export const dynamic = "force-dynamic";
 
 function getRecordBranch(programName) {
   const name = (programName || "").toLowerCase().trim();
-  if (name.includes("computer science") || name.includes("computer engineering") || name.includes("cse")) {
+
+  // CSE
+  if (
+    name.includes("computer science") ||
+    name.includes("computer engineering") ||
+    name.includes("cse")
+  ) {
     return "CSE";
   }
-  if (name.includes("artificial intelligence") || name.includes("ai") || name.includes("machine learning")) {
+
+  // AI
+  if (
+    name.includes("artificial intelligence") ||
+    name.includes("machine learning") ||
+    name.includes("artificial intelligence and data science") ||
+    name.includes("data science and artificial intelligence") ||
+    name.includes("computer science and artificial intelligence") ||
+    name.includes("artificial intelligence and machine learning") ||
+    name.includes("artificial intelligence & machine learning") ||
+    name.includes("robotics and ai") ||
+    name.includes("aiml")
+  ) {
     return "AI";
   }
-  if (name.includes("information technology") || name.includes("it")) {
+
+  // IT
+  if (name.includes("information technology")) {
     return "IT";
   }
-  if (name.includes("electronics and communication") || name.includes("ece") || name.includes("electronics & communication") || name.includes("telecommunication")) {
+
+  // ECE
+  if (
+    name.includes("electronics and communication") ||
+    name.includes("electronics & communication") ||
+    name.includes("electronics and telecommunication") ||
+    name.includes("electronics & telecommunication") ||
+    name.includes("telecommunication engineering") ||
+    name.includes("ece")
+  ) {
     return "ECE";
   }
-  if (name.includes("electrical") || name.includes("ee")) {
-    return "EE";
-  }
-  if (name.includes("mechanical")) {
-    return "Mechanical";
-  }
-  if (name.includes("civil")) {
-    return "Civil";
-  }
-  if (name.includes("chemical")) {
-    return "Chemical";
-  }
-  if (name.includes("biotechnol") || name.includes("bio-technology") || name.includes("bt")) {
-    return "Biotechnology";
-  }
+
   return "Other";
 }
 
@@ -87,6 +102,12 @@ export async function POST(request) {
     // Load CSV data dynamically (ensures fresh load if files changed)
     const records = loadAllCsvRecords();
 
+    console.log("Total records loaded:", records.length);
+    console.log(
+      "Files loaded:",
+      [...new Set(records.map((r) => r.sourceFile))]
+    );
+
     // Eligibility Rules:
     // 1. Seat Type matches selected category
     // 2. Gender matches selected gender
@@ -94,7 +115,7 @@ export async function POST(request) {
     // 4. Home State (HS) Quota rule:
     //    For NITs, if quota is "Home State", it is only eligible if user's Home State matches NIT's state.
     const filtered = [];
-    
+
     // Diagnostic counts for eligible records (before sorting/limiting)
     let eligibleNitCount = 0;
     let eligibleIiitCount = 0;
@@ -117,8 +138,8 @@ export async function POST(request) {
       const isPlan = courseName.includes("planning") || courseName.includes("bplan") || courseName.includes("b.plan");
       const isSpa = instituteName.includes("school of planning") || instituteName.includes("spa") || instituteName.includes("planning and architecture");
       const isDasa = quotaLower.includes("dasa") || quotaLower.includes("foreign") || quotaLower.includes("nri") || quotaLower.includes("oci") || quotaLower.includes("pio") ||
-                     seatTypeLower.includes("dasa") || seatTypeLower.includes("foreign") || seatTypeLower.includes("nri") || seatTypeLower.includes("oci") || seatTypeLower.includes("pio") ||
-                     courseName.includes("dasa") || courseName.includes("nri") || courseName.includes("foreign");
+        seatTypeLower.includes("dasa") || seatTypeLower.includes("foreign") || seatTypeLower.includes("nri") || seatTypeLower.includes("oci") || seatTypeLower.includes("pio") ||
+        courseName.includes("dasa") || courseName.includes("nri") || courseName.includes("foreign");
 
       return !isArch && !isPlan && !isSpa && !isDasa;
     };
@@ -171,9 +192,17 @@ export async function POST(request) {
       else if (type === "IIIT") eligibleIiitCount++;
       else if (type === "GFTI") eligibleGftiCount++;
       else eligibleOtherCount++;
-
       const recordBranch = getRecordBranch(r.program);
-      const matchesPref = preferredBranches.includes(recordBranch) || (preferredBranches.includes("Other") && recordBranch === "Other");
+
+      // STRICT BRANCH FILTERING
+      if (
+        preferredBranches.length > 0 &&
+        !preferredBranches.includes(recordBranch)
+      ) {
+        continue;
+      }
+
+      const matchesPref = true;
 
       filtered.push({
         institute: r.institute,
@@ -192,82 +221,85 @@ export async function POST(request) {
       });
     }
 
-    // Sort by:
-    // 1. Preferred branch match priority (matching branches rank higher)
-    // 2. rankGap ascending (smallest positive gap first)
-    const hasPreferences = preferredBranches.length > 0;
-    filtered.sort((a, b) => {
-      if (hasPreferences) {
-        const aPref = a.matchesPreferred ? 0 : 1;
-        const bPref = b.matchesPreferred ? 0 : 1;
-        if (aPref !== bPref) {
-          return aPref - bPref;
+      // Sort by:
+      // 1. Preferred branch match priority (matching branches rank higher)
+      // 2. rankGap ascending (smallest positive gap first)
+      const hasPreferences = preferredBranches.length > 0;
+      filtered.sort((a, b) => {
+        if (hasPreferences) {
+          const aPref = a.matchesPreferred ? 0 : 1;
+          const bPref = b.matchesPreferred ? 0 : 1;
+          if (aPref !== bPref) {
+            return aPref - bPref;
+          }
+        }
+        return a.rankGap - b.rankGap;
+      });
+
+      // Feature 1: Home State NIT Opportunities (top 10 branches in user's home state NIT)
+      // Deduplicate by institute+program, keeping the earliest round for each unique pair.
+      const hsNitList = filtered.filter(item => item.instituteType === "NIT" && getNitState(item.institute) === homeState);
+      // Sort by round ascending so earliest round appears first during dedup
+      const hsNitSortedByRound = [...hsNitList].sort((a, b) => (a.round || 0) - (b.round || 0));
+      const hsSeenKeys = new Set();
+      const hsNitDeduped = [];
+      for (const item of hsNitSortedByRound) {
+        const key = `${item.institute}|${item.program}`;
+        if (!hsSeenKeys.has(key)) {
+          hsSeenKeys.add(key);
+          hsNitDeduped.push(item);
         }
       }
-      return a.rankGap - b.rankGap;
-    });
+      // Re-sort deduped list by rankGap ascending for best-first display
+      hsNitDeduped.sort((a, b) => a.rankGap - b.rankGap);
+      const homeStateNitOpportunities = hsNitDeduped.slice(0, 10).filter(validateRecord);
 
-    // Feature 1: Home State NIT Opportunities (top 10 branches in user's home state NIT)
-    // Deduplicate by institute+program, keeping the earliest round for each unique pair.
-    const hsNitList = filtered.filter(item => item.instituteType === "NIT" && getNitState(item.institute) === homeState);
-    // Sort by round ascending so earliest round appears first during dedup
-    const hsNitSortedByRound = [...hsNitList].sort((a, b) => (a.round || 0) - (b.round || 0));
-    const hsSeenKeys = new Set();
-    const hsNitDeduped = [];
-    for (const item of hsNitSortedByRound) {
-      const key = `${item.institute}|${item.program}`;
-      if (!hsSeenKeys.has(key)) {
-        hsSeenKeys.add(key);
-        hsNitDeduped.push(item);
-      }
-    }
-    // Re-sort deduped list by rankGap ascending for best-first display
-    hsNitDeduped.sort((a, b) => a.rankGap - b.rankGap);
-    const homeStateNitOpportunities = hsNitDeduped.slice(0, 10).filter(validateRecord);
+      // Feature 3: Recommendation Buckets (max 50 total results)
+      const bestMatches = filtered.slice(0, 10).filter(validateRecord);
+      const goodOptions = filtered.slice(10, 30).filter(validateRecord);
+      const exploreMore = filtered.slice(30, 50).filter(validateRecord);
+      const allEligible = filtered.slice(0, 50).filter(validateRecord); // Keep for backwards compatibility
 
-    // Feature 3: Recommendation Buckets (max 50 total results)
-    const bestMatches = filtered.slice(0, 10).filter(validateRecord);
-    const goodOptions = filtered.slice(10, 30).filter(validateRecord);
-    const exploreMore = filtered.slice(30, 50).filter(validateRecord);
-    const allEligible = filtered.slice(0, 50).filter(validateRecord); // Keep for backwards compatibility
+      return handleCORS(
+        NextResponse.json({
+          query: { rank, category, gender, state: homeState, preferredBranches },
+          totalEligible: filtered.length,
+          totalEligibleColleges: new Set(filtered.map(r => r.institute)).size,
+          bestMatches,
+          goodOptions,
+          exploreMore,
+          homeStateNitOpportunities,
+          allEligible,
+          diagnostics: {
+            totalRecordsLoaded: records.length,
+            totalEligibleBeforeSorting: filtered.length,
+            eligibleNitCount,
+            eligibleIiitCount,
+            eligibleGftiCount,
+            eligibleOtherCount,
+            hsEligibleCount,
+            osEligibleCount,
+            eligibleOldLogicCount,
+            eligibleNewLogicCount,
+            // Aliases for absolute verification safety
+            hsCount: hsEligibleCount,
+            osCount: osEligibleCount,
+            nitCount: eligibleNitCount,
+            iiitCount: eligibleIiitCount,
+            gftiCount: eligibleGftiCount,
+            otherCount: eligibleOtherCount,
+            otherInstituteCount: eligibleOtherCount,
+          }
+        })
+      );
 
-    return handleCORS(
-      NextResponse.json({
-        query: { rank, category, gender, state: homeState, preferredBranches },
-        totalEligible: filtered.length,
-        totalEligibleColleges: new Set(filtered.map(r => r.institute)).size,
-        bestMatches,
-        goodOptions,
-        exploreMore,
-        homeStateNitOpportunities,
-        allEligible,
-        diagnostics: {
-          totalRecordsLoaded: records.length,
-          totalEligibleBeforeSorting: filtered.length,
-          eligibleNitCount,
-          eligibleIiitCount,
-          eligibleGftiCount,
-          eligibleOtherCount,
-          hsEligibleCount,
-          osEligibleCount,
-          eligibleOldLogicCount,
-          eligibleNewLogicCount,
-          // Aliases for absolute verification safety
-          hsCount: hsEligibleCount,
-          osCount: osEligibleCount,
-          nitCount: eligibleNitCount,
-          iiitCount: eligibleIiitCount,
-          gftiCount: eligibleGftiCount,
-          otherCount: eligibleOtherCount,
-          otherInstituteCount: eligibleOtherCount,
-        }
-      })
-    );
-
-  } catch (error) {
+    } catch (error) {
     console.error("Predict API Error:", error);
     return handleCORS(
-      NextResponse.json({ error: "Internal server error" }, { status: 500 })
+      NextResponse.json(
+        { error: "Internal server error" },
+        { status: 500 }
+      )
     );
   }
 }

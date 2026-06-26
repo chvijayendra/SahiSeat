@@ -195,7 +195,7 @@ function Hero() {
 
       <div className="container mx-auto px-4">
         <div className="mx-auto flex max-w-xl flex-col items-center text-center">
-          
+
           {/* Small Trust Badge */}
           <div className="inline-flex items-center gap-1.5 rounded-full border border-border-custom bg-secondary-bg/60 px-3.5 py-1 text-xs text-secondary-text shadow-sm backdrop-blur-md">
             <span className="text-sm">📊</span>
@@ -268,11 +268,10 @@ function ResultCard({ rec, index, highlight = false }) {
   const shortInst = abbreviateInstituteName(rec.institute);
   return (
     <div
-      className={`relative rounded-2xl border p-4 transition-all duration-300 ${
-        highlight
-          ? 'border-primary-purple/35 bg-gradient-to-br from-primary-purple/[0.08] via-card to-card/50 shadow-md shadow-primary-purple/[0.02]'
-          : 'border-border-custom bg-card hover:bg-card/75 hover:border-secondary-text/25'
-      }`}
+      className={`relative rounded-2xl border p-4 transition-all duration-300 ${highlight
+        ? 'border-primary-purple/35 bg-gradient-to-br from-primary-purple/[0.08] via-card to-card/50 shadow-md shadow-primary-purple/[0.02]'
+        : 'border-border-custom bg-card hover:bg-card/75 hover:border-secondary-text/25'
+        }`}
     >
       <div className="flex justify-between items-start gap-3 mb-2">
         <div className="min-w-0 flex-1">
@@ -289,7 +288,7 @@ function ResultCard({ rec, index, highlight = false }) {
               R{rec.round}
             </span>
           </div>
-          
+
           <h3 className="text-sm sm:text-base font-bold leading-snug text-primary-text flex items-center gap-1.5">
             <Building2 className="h-4 w-4 shrink-0 text-primary-purple/80 hidden sm:block" />
             <span className="truncate" title={rec.institute}>{shortInst}</span>
@@ -299,7 +298,7 @@ function ResultCard({ rec, index, highlight = false }) {
             <span className="line-clamp-1" title={rec.program}>{rec.program}</span>
           </p>
         </div>
-        
+
         <div className="shrink-0 text-right">
           <div className="text-[10px] text-secondary-text/60 font-mono">
             CR: <strong className="text-primary-text font-bold">{fmt(rec.closingRank)}</strong>
@@ -322,13 +321,13 @@ function ResultCard({ rec, index, highlight = false }) {
             {rec.gender === 'Female-only (including Supernumerary)' ? 'Female' : 'Gender-Neutral'}
           </span>
         </div>
-        
+
         {/* Ranks (Desktop shows opening rank, Mobile shows details toggle) */}
         <div className="flex items-center gap-2">
           <div className="hidden sm:flex items-center gap-2 font-mono text-secondary-text/50 text-[9px] sm:text-[10px]">
             <span>Op: <strong className="text-primary-text/80 font-semibold">{fmt(rec.openingRank)}</strong></span>
           </div>
-          
+
           <button
             type="button"
             onClick={() => setExpanded(!expanded)}
@@ -752,17 +751,17 @@ function Results({ result, query }) {
 
   if (!result) return null
 
-  const { 
-    bestMatches = [], 
-    goodOptions = [], 
-    exploreMore = [], 
-    homeStateNitOpportunities = [], 
+  const {
+    bestMatches = [],
+    goodOptions = [],
+    exploreMore = [],
+    homeStateNitOpportunities = [],
     totalEligible = 0,
-    totalEligibleColleges = 0 
+    totalEligibleColleges = 0
   } = result
 
-  const firstNitName = homeStateNitOpportunities.length > 0 
-    ? abbreviateInstituteName(homeStateNitOpportunities[0].institute) 
+  const firstNitName = homeStateNitOpportunities.length > 0
+    ? abbreviateInstituteName(homeStateNitOpportunities[0].institute)
     : `NIT ${query.state}`
 
   // Filtering Logic
@@ -774,18 +773,18 @@ function Results({ result, query }) {
       const program = (item.program || '').toLowerCase();
       const instType = (item.instituteType || '').toLowerCase();
       const branchCode = (item.branch || '').toLowerCase();
-      
-      const matchesSearch = !searchTerm || 
-        college.includes(queryStr) || 
-        program.includes(queryStr) || 
+
+      const matchesSearch = !searchTerm ||
+        college.includes(queryStr) ||
+        program.includes(queryStr) ||
         instType.includes(queryStr) ||
         branchCode.includes(queryStr);
-        
+
       const matchesInst = instFilter === 'All' || instType === instFilter.toLowerCase();
-      
+
       const branch = item.branch || 'Other';
       const matchesBranch = selectedBranches.length === 0 || selectedBranches.includes(branch);
-      
+
       return matchesSearch && matchesInst && matchesBranch;
     });
   };
@@ -811,10 +810,14 @@ function Results({ result, query }) {
   const hasMatches = processedBest.length > 0 || processedGood.length > 0 || processedExplore.length > 0 || processedHomeState.length > 0;
 
   return (
-    <section ref={resultsRef} id="results" className="relative py-8 md:py-12 border-t border-border-custom bg-background">
+    <section
+      ref={resultsRef}
+      id="college-results"
+      className="relative py-8 md:py-12 border-t border-border-custom bg-background"
+    >
       <div className="container mx-auto px-4">
         <div className="mx-auto max-w-5xl">
-          
+
           {/* Compact SaaS Filter Toolbar */}
           <div className="mb-6 space-y-3">
             {/* Row 1: Search Input & Sorting */}
@@ -864,11 +867,10 @@ function Results({ result, query }) {
                       key={type}
                       type="button"
                       onClick={() => setInstFilter(type)}
-                      className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                        isSel
-                          ? 'bg-[#1c1c24] border border-border-custom/50 text-primary-text shadow-sm'
-                          : 'border border-transparent text-secondary-text hover:text-primary-text'
-                      }`}
+                      className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${isSel
+                        ? 'bg-[#1c1c24] border border-border-custom/50 text-primary-text shadow-sm'
+                        : 'border border-transparent text-secondary-text hover:text-primary-text'
+                        }`}
                     >
                       {type}
                     </button>
@@ -904,11 +906,10 @@ function Results({ result, query }) {
                           setSelectedBranches([...selectedBranches, branch]);
                         }
                       }}
-                      className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
-                        isSel
-                          ? 'bg-[#1c1c24] border-border-custom text-primary-text'
-                          : 'bg-transparent border-border-custom/50 text-secondary-text hover:border-secondary-text hover:text-primary-text'
-                      }`}
+                      className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${isSel
+                        ? 'bg-[#1c1c24] border-border-custom text-primary-text'
+                        : 'bg-transparent border-border-custom/50 text-secondary-text hover:border-secondary-text hover:text-primary-text'
+                        }`}
                     >
                       {branch}
                     </button>
@@ -1153,7 +1154,7 @@ function PredictForm({ onResult, hasResult, query }) {
 
             <CardContent className="relative p-6 md:p-10">
               <form onSubmit={onSubmit} className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                
+
                 {/* JEE Rank Input */}
                 <div className="md:col-span-2">
                   <Label htmlFor="rank" className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-secondary-text">
@@ -1248,11 +1249,10 @@ function PredictForm({ onResult, hasResult, query }) {
                               setPreferredBranches([...preferredBranches, branch]);
                             }
                           }}
-                          className={`px-4 py-2 rounded-2xl text-xs font-semibold border transition-all duration-200 cursor-pointer ${
-                            isSel
-                              ? 'bg-gradient-to-r from-primary-purple to-accent-blue border-transparent text-white shadow-md shadow-primary-purple/20'
-                              : 'bg-[#111118] border-border-custom text-secondary-text hover:border-primary-purple/50 hover:text-primary-text'
-                          }`}
+                          className={`px-4 py-2 rounded-2xl text-xs font-semibold border transition-all duration-200 cursor-pointer ${isSel
+                            ? 'bg-gradient-to-r from-primary-purple to-accent-blue border-transparent text-white shadow-md shadow-primary-purple/20'
+                            : 'bg-[#111118] border-border-custom text-secondary-text hover:border-primary-purple/50 hover:text-primary-text'
+                            }`}
                         >
                           {branch}
                         </button>
@@ -1425,9 +1425,8 @@ function FAQ() {
               >
                 <span>{q}</span>
                 <ChevronDown
-                  className={`h-4.5 w-4.5 shrink-0 text-secondary-text/60 transition-transform duration-250 ${
-                    openIdx === i ? 'rotate-180' : ''
-                  }`}
+                  className={`h-4.5 w-4.5 shrink-0 text-secondary-text/60 transition-transform duration-250 ${openIdx === i ? 'rotate-180' : ''
+                    }`}
                 />
               </button>
               {openIdx === i && (
@@ -1449,7 +1448,7 @@ function About() {
       <div className="container mx-auto px-4">
         <div className="mx-auto max-w-xl p-8 rounded-3xl border border-border-custom bg-card shadow-lg relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-[1.5px] bg-gradient-to-r from-primary-purple to-transparent" />
-          
+
           <h2 className="text-2xl md:text-3xl font-extrabold text-primary-text tracking-tight mb-4">About SahiSeat</h2>
           <p className="text-sm text-secondary-text leading-relaxed mb-6">
             SahiSeat helps JEE aspirants make smarter JoSAA and CSAB counseling decisions using
@@ -1458,7 +1457,7 @@ function About() {
           <p className="text-sm text-secondary-text mb-6">
             Built by <span className="text-primary-purple font-bold">Vijayendra Ch &amp; Avinash</span> · IIIT Vadodara
           </p>
-          
+
           <div className="grid grid-cols-2 gap-3.5 max-w-sm">
             <a
               href="https://www.linkedin.com/in/ch-vijayendraswamy/"
@@ -1609,14 +1608,14 @@ const App = () => {
           const inst = (item.institute || '').toLowerCase();
           const q = (item.quota || '').toLowerCase();
           const st = (item.seatType || '').toLowerCase();
-          
+
           const isArch = p.includes('arch') || p.includes('architecture');
           const isPlan = p.includes('planning') || p.includes('bplan') || p.includes('b.plan');
           const isSpa = inst.includes('school of planning') || inst.includes('spa') || inst.includes('planning and architecture');
           const isDasa = q.includes('dasa') || q.includes('foreign') || q.includes('nri') || q.includes('oci') || q.includes('pio') ||
-                         st.includes('dasa') || st.includes('foreign') || st.includes('nri') || st.includes('oci') || st.includes('pio') ||
-                         p.includes('dasa') || p.includes('nri') || p.includes('foreign');
-          
+            st.includes('dasa') || st.includes('foreign') || st.includes('nri') || st.includes('oci') || st.includes('pio') ||
+            p.includes('dasa') || p.includes('nri') || p.includes('foreign');
+
           return !isArch && !isPlan && !isSpa && !isDasa;
         });
       };
@@ -1680,15 +1679,29 @@ const App = () => {
 
   useEffect(() => {
     const handleScroll = () => {
-      const predictEl = document.getElementById("predict");
-      if (!predictEl) return;
-      const predictRect = predictEl.getBoundingClientRect();
-      const isFormVisible = predictRect.top < window.innerHeight && predictRect.bottom > 0;
-      setShowFloatingCta(window.scrollY > 150 && !isFormVisible);
+      const resultsEl = document.getElementById("college-results");
+
+      // If college results are not present yet
+      if (!resultsEl) {
+        setShowFloatingCta(window.scrollY > 150);
+        return;
+      }
+
+      const resultsRect = resultsEl.getBoundingClientRect();
+
+      const areResultsVisible =
+        resultsRect.top < window.innerHeight &&
+        resultsRect.bottom > 0;
+
+      // Hide CTA only when college cards are visible
+      setShowFloatingCta(
+        window.scrollY > 150 && !areResultsVisible
+      );
     };
 
     window.addEventListener("scroll", handleScroll);
     handleScroll();
+
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
